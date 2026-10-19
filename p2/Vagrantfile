@@ -1,0 +1,31 @@
+# **************************************************************************** #
+#                                                                              #
+#                                                         :::      ::::::::    #
+#    Vagrantfile                                        :+:      :+:    :+:    #
+#                                                     +:+ +:+         +:+      #
+#    By: chanypar <chanypar@student.42.fr>          +#+  +:+       +#+         #
+#                                                 +#+#+#+#+#+   +#+            #
+#    Created: 2026/10/19 10:15:13 by chanypar          #+#    #+#              #
+#    Updated: 2026/10/19 10:15:39 by chanypar         ###   ########.fr        #
+#                                                                              #
+# **************************************************************************** #
+
+Vagrant.configure("2") do |config|
+  config.vm.box = "bento/ubuntu-24.04"
+
+  config.vm.define "loginS" do |sv|
+    sv.vm.hostname = "loginS"
+
+    sv.vm.network "private_network",
+      ip: "192.168.56.110"
+
+    sv.vm.provider "virtualbox" do |vb|
+      vb.name = "loginS"
+      vb.memory = 2048
+      vb.cpus = 2
+    end
+
+    sv.vm.provision "shell",
+      path: "scripts/setup.sh"
+  end
+end
