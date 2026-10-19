@@ -1,0 +1,26 @@
+# **************************************************************************** #
+#                                                                              #
+#                                                         :::      ::::::::    #
+#    default-ingress.yaml                               :+:      :+:    :+:    #
+#                                                     +:+ +:+         +:+      #
+#    By: chanypar <chanypar@student.42.fr>          +#+  +:+       +#+         #
+#                                                 +#+#+#+#+#+   +#+            #
+#    Created: 2026/10/19 19:03:54 by chanypar          #+#    #+#              #
+#    Updated: 2026/10/19 19:04:00 by chanypar         ###   ########.fr        #
+#                                                                              #
+# **************************************************************************** #
+
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+
+metadata:
+  name: default-ingress
+
+spec:
+  ingressClassName: traefik
+
+  defaultBackend:
+    service:
+      name: app3-service
+      port:
+        number: 80

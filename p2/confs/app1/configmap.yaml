@@ -1,0 +1,31 @@
+# **************************************************************************** #
+#                                                                              #
+#                                                         :::      ::::::::    #
+#    configmap.yaml                                     :+:      :+:    :+:    #
+#                                                     +:+ +:+         +:+      #
+#    By: chanypar <chanypar@student.42.fr>          +#+  +:+       +#+         #
+#                                                 +#+#+#+#+#+   +#+            #
+#    Created: 2026/10/19 18:29:23 by chanypar          #+#    #+#              #
+#    Updated: 2026/10/19 18:29:34 by chanypar         ###   ########.fr        #
+#                                                                              #
+# **************************************************************************** #
+
+
+apiVersion: v1
+kind: ConfigMap
+
+metadata:
+  name: app1-html
+
+data:
+  index.html: |
+    <!DOCTYPE html>
+    <html>
+      <head>
+        <title>App 1</title>
+      </head>
+      <body>
+        <h1>Hello from App 1!</h1>
+        <p>42 Inception of Things - Part 2</p>
+      </body>
+    </html>

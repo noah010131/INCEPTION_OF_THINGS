@@ -1,0 +1,48 @@
+# **************************************************************************** #
+#                                                                              #
+#                                                         :::      ::::::::    #
+#    deployment.yaml                                    :+:      :+:    :+:    #
+#                                                     +:+ +:+         +:+      #
+#    By: chanypar <chanypar@student.42.fr>          +#+  +:+       +#+         #
+#                                                 +#+#+#+#+#+   +#+            #
+#    Created: 2026/10/19 18:37:32 by chanypar          #+#    #+#              #
+#    Updated: 2026/10/19 18:55:10 by chanypar         ###   ########.fr        #
+#                                                                              #
+# **************************************************************************** #
+
+
+apiVersion: apps/v1
+kind: Deployment
+
+metadata:
+  name: app3-deployment
+
+spec:
+  replicas: 1
+
+  selector:
+    matchLabels:
+      app: app3
+
+  template:
+    metadata:
+      labels:
+        app: app3
+
+    spec:
+      containers:
+        - name: nginx
+          image: nginx:stable
+
+          ports:
+            - containerPort: 80
+
+          volumeMounts:
+            - name: html
+              mountPath: /usr/share/nginx/html/index.html
+              subPath: index.html
+
+      volumes:
+        - name: html
+          configMap:
+            name: app3-html
