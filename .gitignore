@@ -1,0 +1,12 @@
+# Vagrant generated files
+.vagrant/
+
+# macOS generated files
+.DS_Store
+
+# Logs
+*.log
+
+# Editor temporary files
+*.swp
+*.swo
