@@ -3,10 +3,10 @@
 #                                                         :::      ::::::::    #
 #    service.yaml                                       :+:      :+:    :+:    #
 #                                                     +:+ +:+         +:+      #
-#    By: chanypar <chanypar@student.42.fr>          +#+  +:+       +#+         #
+#    By: chanyoung <chanyoung@student.42.fr>        +#+  +:+       +#+         #
 #                                                 +#+#+#+#+#+   +#+            #
 #    Created: 2026/10/19 18:40:11 by chanypar          #+#    #+#              #
-#    Updated: 2026/10/19 18:48:07 by chanypar         ###   ########.fr        #
+#    Updated: 2026/10/20 20:38:39 by chanyoung        ###   ########.fr        #
 #                                                                              #
 # **************************************************************************** #
 
@@ -17,7 +17,7 @@ metadata:
   name: app1-service
 
 spec:
-  type: ClusterIP ## 클러스터 내부간 통신 제한 
+  type: ClusterIP
 
   selector:
     app: app1

@@ -3,10 +3,10 @@
 #                                                         :::      ::::::::    #
 #    ingress.yaml                                       :+:      :+:    :+:    #
 #                                                     +:+ +:+         +:+      #
-#    By: chanypar <chanypar@student.42.fr>          +#+  +:+       +#+         #
+#    By: chanyoung <chanyoung@student.42.fr>        +#+  +:+       +#+         #
 #                                                 +#+#+#+#+#+   +#+            #
 #    Created: 2026/10/19 18:59:54 by chanypar          #+#    #+#              #
-#    Updated: 2026/10/19 19:04:08 by chanypar         ###   ########.fr        #
+#    Updated: 2026/10/20 10:12:24 by chanyoung        ###   ########.fr        #
 #                                                                              #
 # **************************************************************************** #
 
@@ -40,5 +40,15 @@ spec:
             backend:
               service:
                 name: app2-service
+                port:
+                  number: 80
+                  
+    - http:
+        paths:
+          - path: /
+            pathType: Prefix
+            backend:
+              service:
+                name: app3-service
                 port:
                   number: 80

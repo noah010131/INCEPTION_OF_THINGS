@@ -1,0 +1,38 @@
+# **************************************************************************** #
+#                                                                              #
+#                                                         :::      ::::::::    #
+#    deployment.yaml                                    :+:      :+:    :+:    #
+#                                                     +:+ +:+         +:+      #
+#    By: chanyoung <chanyoung@student.42.fr>        +#+  +:+       +#+         #
+#                                                 +#+#+#+#+#+   +#+            #
+#    Created: 2026/10/27 19:33:20 by chanyoung         #+#    #+#              #
+#    Updated: 2026/10/29 19:13:08 by chanyoung        ###   ########.fr        #
+#                                                                              #
+# **************************************************************************** #
+
+apiVersion: apps/v1
+kind: Deployment
+
+metadata:
+  name: playground-deployment
+  namespace: dev
+
+spec:
+  replicas: 1
+
+  selector:
+    matchLabels:
+      app: playground
+
+  template:
+    metadata:
+      labels:
+        app: playground
+
+    spec:
+      containers:
+        - name: playground
+          image: wil42/playground:v1
+
+          ports:
+            - containerPort: 8888
