@@ -1,0 +1,25 @@
+# **************************************************************************** #
+#                                                                              #
+#                                                         :::      ::::::::    #
+#    service.yaml                                       :+:      :+:    :+:    #
+#                                                     +:+ +:+         +:+      #
+#    By: chanyoung <chanyoung@student.42.fr>        +#+  +:+       +#+         #
+#                                                 +#+#+#+#+#+   +#+            #
+#    Created: 2026/11/10 09:37:07 by chanyoung         #+#    #+#              #
+#    Updated: 2026/11/10 09:37:07 by chanyoung        ###   ########.fr        #
+#                                                                              #
+# **************************************************************************** #
+
+apiVersion: v1
+kind: Service
+metadata:
+  name: playground-service
+  namespace: dev
+spec:
+  type: ClusterIP
+  selector:
+    app: playground
+  ports:
+    - name: http
+      port: 80
+      targetPort: http

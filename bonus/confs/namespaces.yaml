@@ -1,0 +1,26 @@
+# **************************************************************************** #
+#                                                                              #
+#                                                         :::      ::::::::    #
+#    namespaces.yaml                                    :+:      :+:    :+:    #
+#                                                     +:+ +:+         +:+      #
+#    By: chanyoung <chanyoung@student.42.fr>        +#+  +:+       +#+         #
+#                                                 +#+#+#+#+#+   +#+            #
+#    Created: 2026/10/27 19:37:12 by chanyoung         #+#    #+#              #
+#    Updated: 2026/11/10 09:37:30 by chanyoung        ###   ########.fr        #
+#                                                                              #
+# **************************************************************************** #
+
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: argocd
+---
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: dev
+---
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: gitlab

@@ -6,7 +6,7 @@
 #    By: chanyoung <chanyoung@student.42.fr>        +#+  +:+       +#+         #
 #                                                 +#+#+#+#+#+   +#+            #
 #    Created: 2026/10/27 19:50:56 by chanyoung         #+#    #+#              #
-#    Updated: 2026/10/29 19:37:22 by chanyoung        ###   ########.fr        #
+#    Updated: 2026/10/29 20:23:11 by chanyoung        ###   ########.fr        #
 #                                                                              #
 # **************************************************************************** #
 
@@ -94,6 +94,7 @@ if ! k3d cluster list |
 fi
 
 # kubectl이 사용할 클러스터 선택
+# k3d 클러스터의 접속 정보를 kubeconfig에 병합
 k3d kubeconfig merge "$CLUSTER_NAME" \
   --kubeconfig-switch-context
 
