@@ -6,7 +6,7 @@
 #    By: chanyoung <chanyoung@student.42.fr>        +#+  +:+       +#+         #
 #                                                 +#+#+#+#+#+   +#+            #
 #    Created: 2026/11/10 09:37:07 by chanyoung         #+#    #+#              #
-#    Updated: 2026/11/10 09:37:07 by chanyoung        ###   ########.fr        #
+#    Updated: 2026/11/17 18:23:27 by chanyoung        ###   ########.fr        #
 #                                                                              #
 # **************************************************************************** #
 
@@ -19,7 +19,7 @@ spec:
   project: default
   source:
     # Cluster DNS works from Argo CD without modifying CoreDNS or /etc/hosts.
-    repoURL: http://gitlab-webservice-default.gitlab.svc.cluster.local:8181/root/chanyoung-iot.git
+    repoURL: http://gitlab-webservice-default.gitlab.svc.cluster.local:8181/iot/playground.git
     targetRevision: main
     path: bonus/confs/app
   destination:

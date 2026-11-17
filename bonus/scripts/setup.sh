@@ -6,7 +6,7 @@
 #    By: chanyoung <chanyoung@student.42.fr>        +#+  +:+       +#+         #
 #                                                 +#+#+#+#+#+   +#+            #
 #    Created: 2026/11/10 09:37:35 by chanyoung         #+#    #+#              #
-#    Updated: 2026/11/10 09:38:02 by chanyoung        ###   ########.fr        #
+#    Updated: 2026/11/17 19:28:20 by chanyoung        ###   ########.fr        #
 #                                                                              #
 # **************************************************************************** #
 
@@ -18,7 +18,7 @@ set -euo pipefail
 
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 BONUS_DIR="$(cd "$SCRIPT_DIR/.." && pwd)"
-CLUSTER_NAME="iot-bonus"
+CLUSTER_NAME="iot-p3"
 CONTEXT="k3d-$CLUSTER_NAME"
 APP_MANIFEST="$BONUS_DIR/confs/argocd/application.yaml"
 
@@ -28,7 +28,7 @@ case "$MODE" in
   install|--skip-install|--sync) ;;
   *) echo "Usage: bash $0 [--skip-install|--sync]" >&2; exit 1 ;;
 esac
-trap 'echo "Setup failed at line $LINENO. Check pods/events in context k3d-iot-bonus." >&2' ERR
+trap 'echo "Setup failed at line $LINENO. Check pods/events in context k3d-iot-p3." >&2' ERR
 
 # 2. 필수 프로그램 설치
 
@@ -105,8 +105,8 @@ done
 # 실제 Docker Daemon에 연결할 수 있는지 확인
 docker info >/dev/null
 
-# p3 클러스터를 사용 중이어도 모든 kubectl 명령은 보너스 클러스터에만 적용
-# 현재 context를 바꾸는 대신 명령마다 context를 명시
+# Bonus는 P3 클러스터를 재사용
+# 모든 kubectl 명령에서 동일한 context를 명시
 k() { kubectl --context "$CONTEXT" "$@"; }
 
 # GitLab 프로젝트 생성과 최초 push 이후 --sync로 실행하는 별도 단계
@@ -241,12 +241,19 @@ k get pods -n argocd
 echo "=== Bonus Infrastructure Setup Finished! ==="
 
 cat <<'EOF'
-Infrastructure is ready. Next steps are documented in bonus/README.md:
-  1. Port-forward GitLab and sign in as root.
-  2. Create the PUBLIC project root/chanyoung-iot (empty, default branch main).
-  3. Push this repository, including bonus/confs/app, to that project.
-  4. Run: bash bonus/scripts/setup.sh --sync
+Infrastructure is ready:
 
-GitLab: kubectl --context k3d-iot-bonus -n gitlab port-forward --address 0.0.0.0 svc/gitlab-webservice-default 8081:8181
-Argo CD: kubectl --context k3d-iot-bonus -n argocd port-forward --address 0.0.0.0 svc/argocd-server 8080:443
+  1. Port-forward GitLab and sign in as root.
+  2. Create the PUBLIC group 'iot' and the PUBLIC project 'iot/playground'.
+     Do not initialize the repository with a README.
+  3. Push the Playground manifests to the GitLab project's main branch.
+     Keep the repository structure:
+       bonus/confs/app/deployment.yaml
+       bonus/confs/app/service.yaml
+  4. Verify the Argo CD Application repoURL:
+     http://gitlab-webservice-default.gitlab.svc.cluster.local:8181/iot/playground.git
+  5. Run: bash bonus/scripts/setup.sh --sync
+
+GitLab: kubectl --context k3d-iot-p3 -n gitlab port-forward --address 127.0.0.1 svc/gitlab-webservice-default 8081:8181
+Argo CD: kubectl --context k3d-iot-p3 -n argocd port-forward --address 127.0.0.1 svc/argocd-server 8080:443
 EOF

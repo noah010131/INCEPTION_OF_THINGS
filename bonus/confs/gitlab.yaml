@@ -11,7 +11,7 @@ spec:
     requests:
       storage: 25Gi
 ---
-# 기존 Argo CD repoURL과 port-forward 명령을 그대로 사용
+# Argo CD는 내부 DNS로, VM 사용자는 port-forward로 접속
 apiVersion: v1
 kind: Service
 metadata:
@@ -34,6 +34,7 @@ spec:
   replicas: 1
   # 하나의 데이터 디렉터리를 두 GitLab 인스턴스가 동시에 사용하지 않도록 설정
   strategy:
+    # pod 업데이트 시 기존 pod 종료
     type: Recreate
   selector:
     matchLabels:
@@ -117,18 +118,31 @@ spec:
               subPath: data
             - name: shm
               mountPath: /dev/shm
+          # localhost 검사로 Node IP 허용 목록 없이 접근하고 Host는 external_url과 일치
           # 최초 reconfigure/DB 마이그레이션 중 재시작하지 않고 최대 30분 대기
           startupProbe:
-            httpGet:
-              path: /-/readiness
-              port: http
+            exec:
+              command:
+                - /bin/sh
+                - -c
+                - >
+                  curl --noproxy '*' -fsS -o /dev/null
+                  --connect-timeout 2 --max-time 4
+                  -H 'Host: gitlab.iot.local:8081'
+                  'http://127.0.0.1:8081/-/readiness'
             periodSeconds: 10
             timeoutSeconds: 5
             failureThreshold: 180
           readinessProbe:
-            httpGet:
-              path: /-/readiness?all=1
-              port: http
+            exec:
+              command:
+                - /bin/sh
+                - -c
+                - >
+                  curl --noproxy '*' -fsS -o /dev/null
+                  --connect-timeout 2 --max-time 4
+                  -H 'Host: gitlab.iot.local:8081'
+                  'http://127.0.0.1:8081/-/readiness?all=1'
             periodSeconds: 10
             timeoutSeconds: 5
             failureThreshold: 6
