@@ -1,0 +1,142 @@
+# GitLab CE Omnibus: 별도 PostgreSQL/Redis/MinIO Pod 없이 단일 컨테이너 실행
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: gitlab-storage
+  namespace: gitlab
+spec:
+  accessModes:
+    - ReadWriteOnce
+  resources:
+    requests:
+      storage: 25Gi
+---
+# 기존 Argo CD repoURL과 port-forward 명령을 그대로 사용
+apiVersion: v1
+kind: Service
+metadata:
+  name: gitlab-webservice-default
+  namespace: gitlab
+spec:
+  selector:
+    app: iot-gitlab
+  ports:
+    - name: http
+      port: 8181
+      targetPort: http
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: gitlab
+  namespace: gitlab
+spec:
+  replicas: 1
+  # 하나의 데이터 디렉터리를 두 GitLab 인스턴스가 동시에 사용하지 않도록 설정
+  strategy:
+    type: Recreate
+  selector:
+    matchLabels:
+      app: iot-gitlab
+  template:
+    metadata:
+      labels:
+        app: iot-gitlab
+    spec:
+      terminationGracePeriodSeconds: 120
+      containers:
+        - name: gitlab
+          image: gitlab/gitlab-ce:latest
+          imagePullPolicy: Always
+          ports:
+            - name: http
+              containerPort: 8081
+          env:
+            - name: GITLAB_OMNIBUS_CONFIG
+              value: |
+                # 외부 clone URL에 port-forward 포트 포함
+                external_url 'http://gitlab.iot.local:8081'
+                nginx['listen_port'] = 8081
+                nginx['listen_https'] = false
+                letsencrypt['enable'] = false
+
+                # 소수 사용자 평가용: Puma 단일 프로세스, 백그라운드 작업 동시 실행 축소
+                puma['worker_processes'] = 0
+                puma['min_threads'] = 1
+                puma['max_threads'] = 4
+                sidekiq['concurrency'] = 5
+                postgresql['shared_buffers'] = '128MB'
+
+                # Git HTTP와 GitOps에 불필요한 서비스 및 모니터링 비활성화
+                registry['enable'] = false
+                gitlab_kas['enable'] = false
+                prometheus_monitoring['enable'] = false
+                prometheus['enable'] = false
+                alertmanager['enable'] = false
+                node_exporter['enable'] = false
+                redis_exporter['enable'] = false
+                postgres_exporter['enable'] = false
+                gitlab_exporter['enable'] = false
+                puma['exporter_enabled'] = false
+                sidekiq['metrics_enabled'] = false
+                gitlab_rails['usage_ping_enabled'] = false
+
+                # 평가용 로그 보관량 축소: 서비스별 회전 파일 3개 및 압축
+                # runit 로그는 10MiB 기준, Rails/Nginx 로그는 매일 또는 10M 초과 시 회전
+                # logrotate는 주기적으로 검사하므로 엄격한 디스크 상한은 아님
+                logging['svlogd_size'] = 10 * 1024 * 1024
+                logging['svlogd_num'] = 3
+                logging['svlogd_filter'] = 'gzip'
+                logging['logrotate_frequency'] = 'daily'
+                logging['logrotate_maxsize'] = '10M'
+                logging['logrotate_rotate'] = 3
+                logging['logrotate_compress'] = 'compress'
+
+                # 사용이 끝난 메모리를 오래 보관하지 않도록 설정
+                gitlab_rails['env'] = {
+                  'MALLOC_CONF' => 'dirty_decay_ms:1000,muzzy_decay_ms:1000'
+                }
+                gitaly['env'] = {
+                  'MALLOC_CONF' => 'dirty_decay_ms:1000,muzzy_decay_ms:1000',
+                  'GITALY_COMMAND_SPAWN_MAX_PARALLEL' => '2'
+                }
+          resources:
+            # 예약량이며 상한이 아님: 초기화 중 필요한 메모리를 강제로 제한하지 않음
+            requests:
+              cpu: 500m
+              memory: 3Gi
+          volumeMounts:
+            - name: storage
+              mountPath: /etc/gitlab
+              subPath: config
+            - name: storage
+              mountPath: /var/log/gitlab
+              subPath: logs
+            - name: storage
+              mountPath: /var/opt/gitlab
+              subPath: data
+            - name: shm
+              mountPath: /dev/shm
+          # 최초 reconfigure/DB 마이그레이션 중 재시작하지 않고 최대 30분 대기
+          startupProbe:
+            httpGet:
+              path: /-/readiness
+              port: http
+            periodSeconds: 10
+            timeoutSeconds: 5
+            failureThreshold: 180
+          readinessProbe:
+            httpGet:
+              path: /-/readiness?all=1
+              port: http
+            periodSeconds: 10
+            timeoutSeconds: 5
+            failureThreshold: 6
+      volumes:
+        - name: storage
+          persistentVolumeClaim:
+            claimName: gitlab-storage
+        - name: shm
+          emptyDir:
+            medium: Memory
+            sizeLimit: 256Mi

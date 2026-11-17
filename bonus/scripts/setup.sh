@@ -45,7 +45,7 @@ if [[ "$MODE" == install ]]; then
   echo "=== Installing Docker ==="
 
   "${SUDO[@]}" apt-get update
-  "${SUDO[@]}" apt-get install -y curl ca-certificates git docker.io openssl
+  "${SUDO[@]}" apt-get install -y curl ca-certificates git docker.io
   "${SUDO[@]}" systemctl enable --now docker
 
   # CPU 아키텍처에 맞는 Linux 실행 파일 선택
@@ -79,14 +79,6 @@ if [[ "$MODE" == install ]]; then
     "${SUDO[@]}" bash "$INSTALL_TMP/k3d-install.sh"
   fi
 
-  echo "=== Installing Helm ==="
-
-  # GitLab 공식 차트를 설치하기 위해 Helm도 필요
-  if ! command -v helm >/dev/null 2>&1; then
-    curl -fsSL https://raw.githubusercontent.com/helm/helm/main/scripts/get-helm-3 -o "$INSTALL_TMP/helm-install.sh"
-    "${SUDO[@]}" bash "$INSTALL_TMP/helm-install.sh"
-  fi
-
   # Docker 그룹 권한이 아직 적용되지 않았다면
   # 그룹을 추가하고 해당 권한으로 설치 과정 재진입
   if ! docker info >/dev/null 2>&1; then
@@ -106,7 +98,7 @@ fi
 echo "=== Checking Docker ==="
 
 # 설치를 생략한 경우에도 필요한 프로그램이 있는지 확인
-for tool in docker k3d kubectl helm openssl; do
+for tool in docker k3d kubectl; do
   command -v "$tool" >/dev/null || { echo "Missing dependency: $tool" >&2; exit 1; }
 done
 
@@ -153,7 +145,15 @@ echo "=== Creating k3d Cluster ==="
 # 같은 이름의 클러스터가 있으면 재사용
 if ! k3d cluster list --no-headers | awk -v name="$CLUSTER_NAME" \
   '$1 == name {found=1} END {exit !found}'; then
-  k3d cluster create "$CLUSTER_NAME" --wait
+  # port-forward만 사용하므로 Ingress와 ServiceLB는 실행하지 않음
+  # CoreDNS/PVC 저장소와 자원 확인용 metrics-server는 기본 설정 유지
+  # Pod 컨테이너별 로그는 약 10MiB씩 최대 3개로 회전
+  k3d cluster create "$CLUSTER_NAME" \
+    --k3s-arg '--disable=traefik@server:*' \
+    --k3s-arg '--disable=servicelb@server:*' \
+    --k3s-arg '--kubelet-arg=container-log-max-size=10Mi@server:*' \
+    --k3s-arg '--kubelet-arg=container-log-max-files=3@server:*' \
+    --wait
 fi
 
 # k3d 클러스터의 접속 정보를 kubeconfig에 병합
@@ -172,82 +172,35 @@ echo "=== Creating Namespaces ==="
 
 k apply -f "$BONUS_DIR/confs/namespaces.yaml"
 
-# 6. GitLab 의존 서비스 설치
+# 6. GitLab Omnibus 설치
 
-echo "=== Installing GitLab Dependencies ==="
+echo "=== Installing GitLab Omnibus ==="
 
-# 암호는 최초 실행 시에만 생성
-# 재실행 시 기존 PostgreSQL과 MinIO 데이터에 접근할 수 있도록 기존 암호 유지
-if ! k -n gitlab get secret gitlab-local-credentials >/dev/null 2>&1; then
-  k -n gitlab create secret generic gitlab-local-credentials \
-    --from-literal=postgres-password="$(openssl rand -hex 24)" \
-    --from-literal=storage-password="$(openssl rand -hex 24)"
+# 재실행 시 실행했던 이미지의 digest를 유지해 DB의 의도하지 않은 업그레이드 방지
+# 최초 설치만 공식 CE latest 이미지를 사용하고 이후 업그레이드는 별도로 진행
+GITLAB_IMAGE="$(k -n gitlab get deployment gitlab \
+  --ignore-not-found -o jsonpath='{.spec.template.spec.containers[0].image}')"
+if [[ -n "$GITLAB_IMAGE" ]]; then
+  RUNNING_IMAGE="$(k -n gitlab get pods -l app=iot-gitlab \
+    -o jsonpath='{.items[*].status.containerStatuses[0].imageID}')"
+  RUNNING_IMAGE="${RUNNING_IMAGE%% *}"
+  RUNNING_IMAGE="${RUNNING_IMAGE#docker-pullable://}"
+  if [[ "$RUNNING_IMAGE" == *@sha256:* ]]; then
+    GITLAB_IMAGE="$RUNNING_IMAGE"
+  fi
+else
+  GITLAB_IMAGE="gitlab/gitlab-ce:latest"
 fi
 
-# MinIO는 GitLab 업로드, 아티팩트, 백업 등을 저장하는 S3 호환 저장소
-# GitLab이 사용할 접속 정보와 백업 도구용 설정을 Secret으로 생성
-STORAGE_PASSWORD="$(k -n gitlab get secret gitlab-local-credentials -o jsonpath='{.data.storage-password}' | base64 -d)"
-CONNECTION="$(cat <<EOF
-provider: AWS
-region: us-east-1
-aws_access_key_id: iot-storage
-aws_secret_access_key: $STORAGE_PASSWORD
-aws_signature_version: 4
-host: minio.gitlab.svc.cluster.local
-endpoint: http://minio.gitlab.svc.cluster.local:9000
-path_style: true
-EOF
-)"
-S3_CONFIG="$(cat <<EOF
-[default]
-access_key = iot-storage
-secret_key = $STORAGE_PASSWORD
-host_base = minio.gitlab.svc.cluster.local:9000
-host_bucket = minio.gitlab.svc.cluster.local:9000
-use_https = False
-bucket_location = us-east-1
-signature_v2 = False
-EOF
-)"
-k -n gitlab create secret generic gitlab-object-storage \
-  --from-literal=connection="$CONNECTION" --from-literal=config="$S3_CONFIG" \
-  --dry-run=client -o yaml | k apply -f -
-unset STORAGE_PASSWORD CONNECTION S3_CONFIG
+# PostgreSQL, Redis, Gitaly를 포함한 Omnibus 컨테이너 하나만 실행
+# 설정/로그/저장소는 PVC에 보관하고 /dev/shm은 256Mi로 별도 마운트
+sed "s|image: gitlab/gitlab-ce:latest|image: $GITLAB_IMAGE|" \
+  "$BONUS_DIR/confs/gitlab.yaml" | k apply -f -
 
-# PostgreSQL, Redis, MinIO 및 PVC 생성
-k apply -f "$BONUS_DIR/confs/gitlab-dependencies.yaml"
+# 최초 DB 초기화와 이미지 다운로드를 포함해 최대 30분 대기
+k rollout status deployment/gitlab -n gitlab --timeout=1800s
 
-# 의존 서비스가 준비된 후 저장소 버킷 생성 Job 완료 대기
-for dependency in postgresql redis minio; do
-  k -n gitlab rollout status "deployment/$dependency" --timeout=600s
-done
-k -n gitlab wait --for=condition=Complete job/gitlab-storage-buckets --timeout=300s
-
-# 7. GitLab 설치
-
-echo "=== Installing GitLab ==="
-
-helm repo add gitlab https://charts.gitlab.io/ --force-update
-helm repo update gitlab
-
-# 최초 설치는 버전을 지정하지 않고 저장소의 최신 stable 차트 사용
-# 재실행은 설치된 차트 버전을 유지해 의도하지 않은 업그레이드 방지
-# GitLab 버전 업그레이드는 공식 upgrade path에 따라 별도로 진행
-CHART_ARGS=()
-INSTALLED_CHART="$(helm --kube-context "$CONTEXT" list -n gitlab --filter '^gitlab$' -q)"
-if [[ -n "$INSTALLED_CHART" ]]; then
-  INSTALLED_VERSION="$(helm --kube-context "$CONTEXT" list -n gitlab --filter '^gitlab$' -o json | \
-    sed -n 's/.*"chart":"gitlab-\([^"]*\)".*/\1/p')"
-  [[ -n "$INSTALLED_VERSION" ]] || { echo "Cannot determine installed chart version" >&2; exit 1; }
-  CHART_ARGS=(--version "$INSTALLED_VERSION")
-fi
-
-# values 파일로 GitLab 설정을 적용하고 Pod와 Job 준비를 최대 30분 대기
-helm --kube-context "$CONTEXT" upgrade --install gitlab gitlab/gitlab \
-  -n gitlab -f "$BONUS_DIR/confs/gitlab-values.yaml" \
-  "${CHART_ARGS[@]}" --timeout 30m --wait --wait-for-jobs
-
-# 8. Argo CD 설치
+# 7. Argo CD 설치
 
 echo "=== Installing Argo CD ==="
 
@@ -274,7 +227,7 @@ k rollout status \
   statefulset/argocd-application-controller \
   -n argocd --timeout=600s
 
-# 9. 최종 확인 및 다음 단계 안내
+# 8. 최종 확인 및 다음 단계 안내
 
 echo "=== Final Status ==="
 
