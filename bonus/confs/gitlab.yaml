@@ -122,6 +122,10 @@ spec:
             httpGet:
               path: /-/readiness
               port: http
+              scheme: HTTP
+              httpHeaders:
+                - name: Host
+                  value: gitlab.iot.local:8081
             periodSeconds: 10
             timeoutSeconds: 5
             failureThreshold: 180
