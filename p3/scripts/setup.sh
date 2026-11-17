@@ -6,7 +6,7 @@
 #    By: chanyoung <chanyoung@student.42.fr>        +#+  +:+       +#+         #
 #                                                 +#+#+#+#+#+   +#+            #
 #    Created: 2026/10/27 19:50:56 by chanyoung         #+#    #+#              #
-#    Updated: 2026/10/29 20:23:11 by chanyoung        ###   ########.fr        #
+#    Updated: 2026/11/16 16:57:00 by chanyoung        ###   ########.fr        #
 #                                                                              #
 # **************************************************************************** #
 
@@ -58,7 +58,7 @@ if [[ "${1:-}" != "--skip-install" ]]; then
   echo "=== Installing k3d ==="
 
   if ! command -v k3d >/dev/null 2>&1; then
-    curl -fsSL \
+    curl -fsSL \ 
       https://raw.githubusercontent.com/k3d-io/k3d/main/install.sh | bash
   fi
 
