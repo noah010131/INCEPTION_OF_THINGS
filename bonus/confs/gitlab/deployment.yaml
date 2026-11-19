@@ -34,6 +34,13 @@ spec:
                 nginx['listen_https'] = false
                 letsencrypt['enable'] = false
 
+                          # Kubernetes Health Check 허용
+                gitlab_rails['monitoring_whitelist'] = [
+                  '127.0.0.0/8',
+                  '10.42.0.0/16',
+                  '172.18.0.2/32'
+                ]
+
                 # 소수 사용자 평가용: Puma 단일 프로세스, 백그라운드 작업 동시 실행 축소
                 puma['worker_processes'] = 0
                 puma['min_threads'] = 1
