@@ -1,4 +1,3 @@
-
 1. 사양: 메모리 8기가, 저장공간 25기가
 
   Helm vs Omnibus
@@ -17,7 +16,7 @@
 2. kubectl + k3d 설치
 3. k3d cluster 설치
 4. Namespace 생성
-5. Gitlab Omnibus 설치 (gitlab.yaml)
+5. GitLab Omnibus 설치 (`confs/gitlab/`)
   - PVC GitLab 설정과 데이터 저장
   - Service Kubernetes 내부에서 GitLab에 접근
   - Deployment GitLab Pod 생성 및 관리
@@ -32,9 +31,9 @@
 
 메뉴얼 설정:설치 후 실제 Ready 상태 확인:
 ```bash
-kubectl --context k3d-iot-bonus -n gitlab rollout status deployment/gitlab --timeout=1800s
-kubectl --context k3d-iot-bonus -n gitlab get pods -l app=iot-gitlab
-kubectl --context k3d-iot-bonus -n gitlab exec deployment/gitlab -- \
+kubectl --context k3d-iot-p3 -n gitlab rollout status deployment/gitlab --timeout=1800s
+kubectl --context k3d-iot-p3 -n gitlab get pods -l app=iot-gitlab
+kubectl --context k3d-iot-p3 -n gitlab exec deployment/gitlab -- \
   curl --noproxy '*' -fsS --max-time 4 -H 'Host: gitlab.iot.local:8081' \
   'http://127.0.0.1:8081/-/readiness?all=1'
 ```

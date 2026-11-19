@@ -1,0 +1,12 @@
+# GitLab CE Omnibus: 별도 PostgreSQL/Redis/MinIO Pod 없이 단일 컨테이너 실행
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: gitlab-storage
+  namespace: gitlab
+spec:
+  accessModes:
+    - ReadWriteOnce
+  resources:
+    requests:
+      storage: 25Gi

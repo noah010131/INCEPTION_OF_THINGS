@@ -12,19 +12,14 @@
 
 apiVersion: v1
 kind: Service
-
 metadata:
   name: playground-service
   namespace: dev
-  
 spec:
   type: ClusterIP
-  
   selector:
     app: playground
-    
   ports:
     - name: http
-      protocol: TCP
       port: 80
-      targetPort: 8888
+      targetPort: http

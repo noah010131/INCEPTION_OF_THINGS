@@ -6,7 +6,7 @@
 #    By: chanyoung <chanyoung@student.42.fr>        +#+  +:+       +#+         #
 #                                                 +#+#+#+#+#+   +#+            #
 #    Created: 2026/11/10 09:37:35 by chanyoung         #+#    #+#              #
-#    Updated: 2026/11/17 19:28:20 by chanyoung        ###   ########.fr        #
+#    Updated: 2026/11/17 19:35:18 by chanyoung        ###   ########.fr        #
 #                                                                              #
 # **************************************************************************** #
 
@@ -176,28 +176,13 @@ k apply -f "$BONUS_DIR/confs/namespaces.yaml"
 
 echo "=== Installing GitLab Omnibus ==="
 
-# 재실행 시 실행했던 이미지의 digest를 유지해 DB의 의도하지 않은 업그레이드 방지
-# 최초 설치만 공식 CE latest 이미지를 사용하고 이후 업그레이드는 별도로 진행
-GITLAB_IMAGE="$(k -n gitlab get deployment gitlab \
-  --ignore-not-found -o jsonpath='{.spec.template.spec.containers[0].image}')"
-if [[ -n "$GITLAB_IMAGE" ]]; then
-  RUNNING_IMAGE="$(k -n gitlab get pods -l app=iot-gitlab \
-    -o jsonpath='{.items[*].status.containerStatuses[0].imageID}')"
-  RUNNING_IMAGE="${RUNNING_IMAGE%% *}"
-  RUNNING_IMAGE="${RUNNING_IMAGE#docker-pullable://}"
-  if [[ "$RUNNING_IMAGE" == *@sha256:* ]]; then
-    GITLAB_IMAGE="$RUNNING_IMAGE"
-  fi
-else
-  GITLAB_IMAGE="gitlab/gitlab-ce:latest"
-fi
+# GitLab PVC, Service, Deployment 생성
+k apply \
+  -f "$BONUS_DIR/confs/gitlab/pvc.yaml" \
+  -f "$BONUS_DIR/confs/gitlab/service.yaml" \
+  -f "$BONUS_DIR/confs/gitlab/deployment.yaml"
 
-# PostgreSQL, Redis, Gitaly를 포함한 Omnibus 컨테이너 하나만 실행
-# 설정/로그/저장소는 PVC에 보관하고 /dev/shm은 256Mi로 별도 마운트
-sed "s|image: gitlab/gitlab-ce:latest|image: $GITLAB_IMAGE|" \
-  "$BONUS_DIR/confs/gitlab.yaml" | k apply -f -
-
-# 최초 DB 초기화와 이미지 다운로드를 포함해 최대 30분 대기
+# GitLab이 정상적으로 실행될 때까지 대기 (최대 30분)
 k rollout status deployment/gitlab -n gitlab --timeout=1800s
 
 # 7. Argo CD 설치

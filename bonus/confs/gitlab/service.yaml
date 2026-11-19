@@ -1,0 +1,13 @@
+# Argo CD는 내부 DNS로, VM 사용자는 port-forward로 접속
+apiVersion: v1
+kind: Service
+metadata:
+  name: gitlab-webservice-default
+  namespace: gitlab
+spec:
+  selector:
+    app: iot-gitlab
+  ports:
+    - name: http
+      port: 8181
+      targetPort: http
