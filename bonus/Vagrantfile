@@ -1,0 +1,21 @@
+SERVER_IP = "192.168.56.112"
+NAME = "chanyparBonus"
+
+Vagrant.configure("2") do |config|
+  config.vm.box = "bento/debian-13"
+  config.vm.box_architecture = :auto
+
+  config.vm.define NAME do |server|
+    server.vm.hostname = NAME
+    server.vm.network "private_network", ip: SERVER_IP
+    # Leave room for Debian and container images alongside GitLab's 25 GiB PVC.
+    server.vm.disk :disk, size: "32GB", primary: true
+
+    server.vm.provider "virtualbox" do |vb|
+      vb.name = NAME
+      vb.memory = 8192
+      vb.cpus = 2
+      vb.gui = false
+    end
+  end
+end
